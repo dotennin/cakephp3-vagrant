@@ -1,0 +1,27 @@
+- name: create private key for host
+  shell: |
+    creates=/etc/pki/tls/private/{{ ansible_fqdn }}.key
+    umask 0277 &&
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+      -out /etc/pki/tls/private/{{ ansible_fqdn }}.key
+
+- name: self signed certificate
+  shell: |
+    creates=/etc/pki/tls/certs/{{ ansible_fqdn }}.crt
+    openssl req -new -key /etc/pki/tls/private/{{ ansible_fqdn }}.key \
+      -subj "{{ self_signed_certificate_subject_prefix }}/CN={{ ansible_fqdn }}" \
+      -out /etc/pki/tls/certs/{{ ansible_fqdn }}.csr &&
+    openssl x509 -req -in /etc/pki/tls/certs/{{ ansible_fqdn }}.csr \
+      -signkey /etc/pki/tls/private/{{ ansible_fqdn }}.key \
+      -set_serial {{ self_signed_certificate_serial }} \
+      -days {{ self_signed_certificate_days }} \
+      -out /etc/pki/tls/certs/{{ ansible_fqdn }}.crt &&
+    rm /etc/pki/tls/certs/{{ ansible_fqdn }}.csr
+
+- name: self signed certificate followed by key
+  shell: |
+    creates=/etc/pki/tls/private/{{ ansible_fqdn }}.crt_and_key
+    umask 0277 &&
+    cat /etc/pki/tls/certs/{{ ansible_fqdn }}.crt \
+        /etc/pki/tls/private/{{ ansible_fqdn }}.key > \
+        /etc/pki/tls/private/{{ ansible_fqdn }}.crt_and_key

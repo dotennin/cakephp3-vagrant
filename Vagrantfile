@@ -10,9 +10,8 @@ Vagrant.configure("2") do |config|
     config.vm.network :private_network, ip: "192.168.33.10" 
     config.ssh.forward_agent = true
 
-		config.vm.provision "ansible" do |ansible|
-			ansible.playbook = "ansible/playbook.yml"
-			ansible.inventory_path = "ansible/hosts"
-    ansible.limit = 'all'
-end
+		config.vm.provision "shell" do |sh|
+			sh.path = "provisioning/provision.sh"
+			sh.args = "provisioning/playbook.yml provisioning/hosts"
+		end
 end

@@ -1,0 +1,257 @@
+---
+
+- name: enable ip forwarding for lxc
+  sysctl: name=net.ipv4.ip_forward value=1 state=present
+
+- name: install dependent packages to build lxc
+  yum: name={{ item }} state=present
+  with_items:
+    - libcap-devel
+    - pkgconfig
+    - rpm-build
+    - docbook2X
+    - dnsmasq
+    - bridge-utils
+    - dpkg
+    - debootstrap
+  when: lxc_version == '0.9.0'
+
+- name: install dependent packages to build lxc
+  yum: name={{ item }} state=present
+  with_items:
+    - libcap-devel
+    - pkgconfig
+    - rpm-build
+    - docbook-utils
+    - dnsmasq
+    - bridge-utils
+    - dpkg
+    - debootstrap
+  when: lxc_version in ['0.7.5', '0.8.0']
+
+- name: download lxc source
+  get_url: >
+    url=http://lxc.sourceforge.net/download/lxc/lxc-{{ lxc_version }}.tar.gz
+    dest=/usr/local/src/lxc-{{ lxc_version }}.tar.gz
+    sha256sum={{ lxc_tarball_sha256sum }}
+
+- name: unpack lxc source
+  command: >
+    creates=/usr/local/src/lxc-{{ lxc_version }}
+    tar xf /usr/local/src/lxc-{{ lxc_version }}.tar.gz -C /usr/local/src
+
+- name: configure lxc source
+  command: >
+    creates=/usr/local/src/lxc-{{ lxc_version }}/config.status
+    chdir=/usr/local/src/lxc-{{ lxc_version }}
+    ./configure
+  when: lxc_version != '0.8.0'
+
+- name: configure lxc source
+  command: >
+    creates=/usr/local/src/lxc-{{ lxc_version }}/config.status
+    chdir=/usr/local/src/lxc-{{ lxc_version }}
+    ./configure --disable-apparmor
+  when: lxc_version == '0.8.0'
+
+- name: copy lxc.spec for lxc
+  # we need to pass --disable-apparmor option to configure for lxc 0.8.0
+  copy: >
+    src=lxc-0.8.0.spec
+    dest=/usr/local/src/lxc-{{ lxc_version }}/lxc.spec
+  when: lxc_version == '0.8.0'
+
+- name: build lxc source
+  command: >
+    creates=/root/rpmbuild/RPMS/x86_64/lxc-{{ lxc_version }}-1.el6.x86_64.rpm
+    chdir=/usr/local/src/lxc-{{ lxc_version }}
+    make rpm
+  when: lxc_version in ['0.8.0', '0.9.0']
+
+- name: build lxc source
+  command: >
+    creates=/root/rpmbuild/RPMS/x86_64/lxc-{{ lxc_version }}-1.x86_64.rpm
+    chdir=/usr/local/src/lxc-{{ lxc_version }}
+    make rpm
+  when: lxc_version == '0.7.5'
+
+- name: check lxc-libs is installed
+  shell: rpm -q lxc-libs > /dev/null; echo $?
+  register: result
+  when: lxc_version in ['0.8.0', '0.9.0']
+
+- name: install lxc-libs
+  command: |
+    rpm -i /root/rpmbuild/RPMS/x86_64/lxc-libs-{{ lxc_version }}-1.el6.x86_64.rpm
+  when: lxc_version in ['0.8.0', '0.9.0'] and result.stdout != '0'
+
+- name: check lxc is installed
+  shell: rpm -q lxc > /dev/null; echo $?
+  register: result
+
+- name: install lxc
+  command: |
+    rpm -i /root/rpmbuild/RPMS/x86_64/lxc-{{ lxc_version }}-1.el6.x86_64.rpm
+  when: lxc_version in ['0.8.0', '0.9.0'] and result.stdout != '0'
+
+- name: install lxc
+  command: |
+    rpm -i /root/rpmbuild/RPMS/x86_64/lxc-{{ lxc_version }}-1.x86_64.rpm
+  when: lxc_version == '0.7.5' and result.stdout != '0'
+
+- name: centos container definition for lxc
+  template: >
+    src=lxc-centos.j2
+    dest=/usr/share/lxc/templates/lxc-centos
+    owner=root
+    group=root
+    mode=0755
+  when: lxc_version in ['0.8.0', '0.9.0']
+
+- name: centos container definition for lxc
+  template: >
+    src=lxc.centos.j2
+    dest=/usr/lib64/lxc/templates/lxc-centos
+    owner=root
+    group=root
+    mode=0755
+  when: lxc_version == '0.7.5'
+
+- name: lxc default config directory
+  file: >
+    path=/etc/lxc
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: lxc default config
+  template: >
+    src=default.conf.j2
+    dest=/etc/lxc/default.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: dnsmasq main config
+  template: >
+    src=dnsmasq.conf.j2
+    dest=/etc/dnsmasq.conf
+    owner=root
+    group=root
+    mode=0644
+  notify:
+    - restart dnsmasq
+
+- name: lxc dnsmasq config
+  template: >
+    src=dnsmasq.lxc.conf.j2
+    dest=/etc/dnsmasq.d/lxc.conf
+    owner=root
+    group=root
+    mode=0644
+  notify:
+    - restart dnsmasq
+
+- name: dnsmasq service
+  service: name=dnsmasq state=started enabled=yes
+
+- name: lxc dhclient config
+  template: >
+    src=dhclient-eth0.conf.j2
+    dest=/etc/dhcp/dhclient-eth0.conf
+    owner=root
+    group=root
+    mode=0644
+  notify:
+    - restart network
+
+- name: lxc config directory
+  file: >
+    path=/var/lib/lxc
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: lxc run directory
+  file: >
+    path=/var/run/lxc
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: lxc-net config for init script
+  template: >
+    src=lxc-net.sysconfig.j2
+    dest=/etc/sysconfig/lxc-net
+    owner=root
+    group=root
+    mode=0644
+  notify:
+    - restart lxc-net
+
+- name: lxc-net init script
+  template: >
+    src=lxc-net.init.j2
+    dest=/etc/init.d/lxc-net
+    owner=root
+    group=root
+    mode=0755
+  notify:
+    - restart lxc-net
+
+- name: lxc-net service
+  service: name=lxc-net state=started enabled=yes
+
+- name: lxc auto config directory
+  file: >
+    path=/etc/lxc/auto
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: lxc-auto init script
+  template: >
+    src=lxc-auto.init.j2
+    dest=/etc/init.d/lxc-auto
+    owner=root
+    group=root
+    mode=0755
+  notify:
+    - restart lxc-auto
+
+- name: lxc-auto service
+  service: name=lxc-auto state=started enabled=yes
+
+- name: cgroup directory for lxc
+  file: >
+    path=/cgroup
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: mount cgroup for lxc
+  # cannot create subdirectories if opts contains net_prio
+  mount: >
+    src=/lxc
+    name=/cgroup
+    fstype=cgroup
+    opts="cpuset,ns,cpu,cpuacct,memory,devices,freezer,net_cls,blkio,perf_event"
+    dump=0
+    passno=0
+    state=mounted
+  when: lxc_version == '0.9.0'
+
+- name: mount cgroup for lxc
+  mount: >
+    src=/lxc
+    name=/cgroup
+    fstype=cgroup
+    dump=0
+    passno=0
+    state=mounted
+  when: lxc_version in ['0.7.5', '0.8.0']

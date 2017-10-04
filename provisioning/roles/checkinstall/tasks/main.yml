@@ -1,0 +1,76 @@
+---
+
+- name: download checkinstall source
+  git: >
+    repo=http://checkinstall.izto.org/checkinstall.git
+    dest=/usr/local/src/checkinstall
+    update=no
+
+- name: build checkinstall
+  command: >
+    creates=/usr/local/src/checkinstall/installwatch/installwatch.so
+    chdir=/usr/local/src/checkinstall
+    make
+
+- name: copy checkinstallrc filename patch
+  copy: >
+    dest=/usr/local/src/checkinstall/checkinstallrc.filename.patch
+    src=checkinstallrc.filename.patch
+
+- name: apply checkinstallrc filename patch
+  shell: >
+    creates=/usr/local/src/checkinstall/Makefile.orig
+    chdir=/usr/local/src/checkinstall
+    patch -b -p1 < /usr/local/src/checkinstall/checkinstallrc.filename.patch
+
+- name: copy checkinstallrc-dist content patch
+  copy: >
+    dest=/usr/local/src/checkinstall/checkinstallrc-dist.patch
+    src=checkinstallrc-dist.patch
+
+- name: apply checkinstallrc-dist patch
+  shell: >
+    creates=/usr/local/src/checkinstall/checkinstallrc-dist.orig
+    chdir=/usr/local/src/checkinstall
+    patch -o checkinstallrc -b < /usr/local/src/checkinstall/checkinstallrc-dist.patch
+
+- name: modify checkinstallrc default location
+  shell: >
+    creates=/usr/local/src/checkinstall/checkinstall.orig
+    chdir=/usr/local/src/checkinstall
+    sed -i.orig 's|\${INSTALLDIR}/checkinstallrc|/etc/checkinstallrc|' checkinstall
+
+- name: install checkinstall
+  command: >
+    creates=/usr/lib64/installwatch.so
+    chdir=/usr/local/src/checkinstall
+    make install PREFIX=/usr LIBDIR=/usr/lib64 CONFDIR=/etc
+
+- name: "create directories for root user's rpmbuild"
+  file: >
+    path=~root/{{ item }}
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+  with_items:
+    - rpmbuild
+    - rpmbuild/BUILD
+    - rpmbuild/RPMS
+    - rpmbuild/SOURCES
+    - rpmbuild/SPECS
+    - rpmbuild/SRPMS
+
+- name: make rpm for checkinstall
+  command: >
+    creates=/root/rpmbuild/RPMS/x86_64/checkinstall-{{ checkinstall_version }}-1.x86_64.rpm
+    chdir=/usr/local/src/checkinstall
+    env LD_PRELOAD=/usr/local/src/checkinstall/installwatch/installwatch.so
+    /usr/sbin/checkinstall -R --nodoc
+      --pkgversion={{ checkinstall_version }} -y
+      make install PREFIX=/usr LIBDIR=/usr/lib64 CONFDIR=/etc
+
+- name: install checkinstall rpm
+  yum: >
+    name=/root/rpmbuild/RPMS/x86_64/checkinstall-{{ checkinstall_version }}-1.x86_64.rpm
+    state=present
