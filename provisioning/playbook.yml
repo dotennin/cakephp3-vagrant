@@ -1,0 +1,6 @@
+hosts: vagrantsss # group name
+sudo: true
+user: vagrant
+tasks:
+  - name: install git
+    yum: name=git update_cache=yes
