@@ -2,5 +2,7 @@
 - hosts: all
   become: yes
   roles:
-    - init
-    - git
+    # - init
+    # - git
+    # - php7
+    - dbserver

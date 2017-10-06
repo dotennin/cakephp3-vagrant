@@ -1,0 +1,25 @@
+---
+- name: Add epel repository
+  yum: name=epel-release
+
+- name: Add remi repository
+  yum: name=http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
+
+- name: Install PHP packages
+  yum: name={{ item }} enablerepo=remi,remi-php70
+  with_items:
+    - php
+    - php-mbstring
+    - php-intl
+    - php-pdo
+    - php-mysql
+
+- name: Install develop
+  yum: name={{ item }} enablerepo=remi,remi-php70
+  with_items:
+    - php-pecl-xdebug
+    - php-phpunit-PHPUnit
+
+- template: src=xdebug.ini.j2 dest=/etc/php.d/xdebug.ini
+
+- include: php-composer.yml

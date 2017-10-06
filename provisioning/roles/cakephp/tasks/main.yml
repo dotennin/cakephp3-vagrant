@@ -1,0 +1,10 @@
+---
+- composer: command=install working_dir=/vagrant/
+
+- shell: /usr/bin/composer create-project cakephp/app --no-interaction --no-progress --no-ansi
+  args:
+    chdir: /vagrant
+    creates: /vagrant/app/vendor/cakephp
+
+- template: src=httpd.conf.j2 dest=/etc/httpd/conf/httpd.conf
+  notify: httpd-restart

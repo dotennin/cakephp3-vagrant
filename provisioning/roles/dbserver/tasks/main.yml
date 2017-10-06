@@ -1,0 +1,15 @@
+---
+- yum: pkg={{ item }} state=present enablerepo=mysql56-community
+  with_items:
+    - MySQL-python
+    - mysql-community-server
+
+- template: src=my.cnf dest=/etc/my.cnf
+
+- service: name=mysqld.service enabled=yes state=restarted
+
+- mysql_user: name={{ item.name }} state=present password={{ item.password }} host={{ item.host }} priv={{ item.priv }}
+  with_items:
+    - { name: "vagrant", password: "vagrant", host: "%",            priv: "*.*:ALL" }
+    - { name: "vagrant", password: "vagrant", host: localhost,      priv: "*.*:ALL" }
+    - { name: "vagrant", password: "vagrant", host: "127.0.0.1",    priv: "*.*:ALL" }

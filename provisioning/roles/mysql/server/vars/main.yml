@@ -1,3 +1,0 @@
-expire_logs_days: 90
-long_query_time: 10
-mysql_root_password: password
