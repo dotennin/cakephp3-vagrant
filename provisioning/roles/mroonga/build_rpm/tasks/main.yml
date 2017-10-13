@@ -1,4 +1,0 @@
----
-
-- include: dependent_rpms.yml
-- include: build.yml sudo_user={{ mroonga_

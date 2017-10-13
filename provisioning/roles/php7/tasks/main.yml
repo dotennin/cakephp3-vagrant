@@ -22,4 +22,11 @@
 
 - template: src=xdebug.ini.j2 dest=/etc/php.d/xdebug.ini
 
+- name: Change timezone to Tokyo
+  replace: >
+      dest=/etc/php.ini
+      regexp="^;date\.timezone ="
+      replace="date.timezone = Asia/Tokyo"
+
+
 - include: php-composer.yml

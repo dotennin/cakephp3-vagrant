@@ -1,3 +1,0 @@
----
-dependencies:
-  - { role: ulimit_num_open_fd }

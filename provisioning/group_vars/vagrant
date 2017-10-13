@@ -1,0 +1,12 @@
+# Project directory name
+project_name: app
+project_root: /vagrant/{{project_name}}
+timezone: Asia/Tokyo
+ssh_user: vagrant
+# Web root
+webroot: /vagrant/{{project_name}}/webroot
+
+# Mysql config
+db_user: vagrant
+db_password: vagrant
+

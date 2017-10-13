@@ -1,10 +1,34 @@
 ---
-- composer: command=install working_dir=/vagrant/
+- name: Check Project exists
+  stat: path={{project_root}}/config
+  register: result
 
-- shell: /usr/bin/composer create-project cakephp/app --no-interaction --no-progress --no-ansi
+- name: Download cakephp
+  become: yes
+  become_user: "{{ssh_user}}"
+  shell: /usr/local/bin/composer create-project --prefer-dist cakephp/app {{project_root}}
+  when: not result.stat.exists
+
+- name: Permision config
+  shell: chmod 777 {{project_root}}/logs {{project_root}}/tmp
+  when: not result.stat.exists
+
+- name: Install Debug_kit
+  shell: /usr/local/bin/composer require --dev cakephp/debug_kit "~3.0"
   args:
-    chdir: /vagrant
-    creates: /vagrant/app/vendor/cakephp
+      chdir: "{{project_root}}"
+  when: not result.stat.exists
 
-- template: src=httpd.conf.j2 dest=/etc/httpd/conf/httpd.conf
-  notify: httpd-restart
+- name: Database config
+  template:
+      src=app.php.j2
+      dest={{project_root}}/config/app.php
+  when: not result.stat.exists
+
+- name: Cakephp Composer init
+  become: yes
+  become_user: "{{ssh_user}}"
+  shell: /usr/local/bin/composer install
+  args:
+      chdir: "{{project_root}}"
+

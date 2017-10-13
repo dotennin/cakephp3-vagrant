@@ -1,2 +1,0 @@
-- name: reload spawn-fcgi
-  service: name=spawn-fcgi state=reloaded

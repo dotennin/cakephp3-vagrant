@@ -1,0 +1,23 @@
+---
+- name: Add mysql56 repo
+  yum: name=http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+
+- name: Install MySQL
+  yum: pkg={{ item }} state=present enablerepo=mysql56-community
+  with_items:
+    - MySQL-python
+    - mysql-community-server
+
+- template: src=my.cnf dest=/etc/my.cnf
+
+- service: name=mysqld.service enabled=yes state=restarted
+
+- mysql_user: name={{ item.name }} state=present password={{ item.password }} host={{ item.host }} priv={{ item.priv }}
+  with_items:
+    - { name: "{{db_user}}", password: "{{db_password}}", host: "%",            priv: "*.*:ALL" }
+    - { name: "{{db_user}}", password: "{{db_password}}", host: localhost,      priv: "*.*:ALL" }
+    - { name: "{{db_user}}", password: "{{db_password}}", host: "127.0.0.1",    priv: "*.*:ALL" }
+
+- name: Create Database {{project_name}}
+  shell: >
+      mysql -u {{db_user}} -p{{db_password}} -e "CREATE DATABASE IF NOT EXISTS {{project_name}} DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;"

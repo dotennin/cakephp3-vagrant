@@ -1,0 +1,30 @@
+---
+- name: Install apache server
+  yum: name={{ item }} state=present
+  with_items:
+    - httpd
+    - mod_ssl
+
+- name: make sure the directory exists
+  action: file path={{ webroot }} state=directory
+
+- name: DocumentRoot change to {{ webroot }}
+  replace:
+      dest=/etc/httpd/conf/httpd.conf
+      regexp='DocumentRoot "/var/www/html"'
+      replace='DocumentRoot "{{ webroot }}"'
+- name: Directory change to {{webroot}}
+  replace:
+      dest=/etc/httpd/conf/httpd.conf
+      regexp='Directory "/var/www"'
+      replace='Directory "{{webroot}}"'
+
+- name: Allow .htaccess
+  replace:
+      dest=/etc/httpd/conf/httpd.conf
+      regexp='AllowOverride None'
+      replace='AllowOverride All'
+  notify:
+    - httpd-restart
+
+- service: name=httpd.service enabled=yes state=started
