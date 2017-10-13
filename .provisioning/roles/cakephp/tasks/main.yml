@@ -9,9 +9,9 @@
   shell: /usr/local/bin/composer create-project --prefer-dist cakephp/app {{project_root}}
   when: not result.stat.exists
 
-- name: Permision config
-  shell: chmod 777 {{project_root}}/logs {{project_root}}/tmp
-  when: not result.stat.exists
+# - name: Permision config
+#   shell: chmod -R 777 {{project_root}}/logs {{project_root}}/tmp
+#   when: not result.stat.exists
 
 - name: Install Debug_kit
   shell: /usr/local/bin/composer require --dev cakephp/debug_kit "~3.0"
