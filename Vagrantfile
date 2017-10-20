@@ -4,7 +4,7 @@ Vagrant.configure("2") do |config|
 		 v.customize ["modifyvm", :id, "--memory", 1024]
 	end
 
-	config.vm.synced_folder ".", "/vagrant", mount_options: ['dmode=777','fmode=755']
+	config.vm.synced_folder ".", "/vagrant", mount_options: ['dmode=777','fmode=777']
 
 	config.vm.box = "bento/centos-7.2"
 	if Vagrant.has_plugin? "vagrant-vbguest"
