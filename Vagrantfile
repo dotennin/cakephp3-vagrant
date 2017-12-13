@@ -17,6 +17,11 @@ Vagrant.configure("2") do |config|
 	config.vm.network :private_network, ip: "192.168.33.11" 
 	config.ssh.forward_agent = true
 
+	# Fix timeout error for OS X
+	config.vm.provider "virtualbox" do |vb|
+    vb.customize ["modifyvm", :id, "--cableconnected1", "on"]
+  end
+
 	config.vm.provision "shell" do |sh|
 		sh.path = ".provisioning/provision.sh"
 		sh.args = ".provisioning/playbook.yml .provisioning/hosts"
