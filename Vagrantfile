@@ -3,7 +3,7 @@
 
 Vagrant.configure("2") do |config|
 	config.vm.provider :virtualbox do |v|
-		 v.name = "centos7.1"
+		 v.name = "centos7.2"
 		 v.customize ["modifyvm", :id, "--memory", 1024]
 	end
 
